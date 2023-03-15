@@ -10,17 +10,17 @@ pd.set_option("display.float_format", '{:,.2f}'.format)
 
 con = ibis.pyspark.connect(spark)
 
-spark_df = spark.read.parquet("s3://nyc-tlc/trip data/yellow_tripdata_2022-11.parquet")
+spark_df = spark.read.parquet("s3://nyc-tlc/trip data/fhvhv_tripdata_*.parquet")
 spark_df.createOrReplaceTempView("trip_data")
 trip_data = con.table("trip_data")
 
-trip_summary = (trip_data[_.passenger_count > 0]
-.group_by([_.VendorID])
+trip_data = trip_data.mutate(total_amount=_.base_passenger_fare + _.tolls + _.sales_tax + _.congestion_surcharge + _.tips)
+
+trip_summary = (trip_data.group_by([_.hvfhs_license_num])
 .aggregate(
     trip_count=_.count(),
-    passenger_total=_.passenger_count.sum(),
-    trip_distance_total=_.trip_distance.sum(),
-    trip_distance_avg=_.trip_distance.mean(),
+    trip_miles_total=_.trip_miles.sum(),
+    trip_miles_avg=_.trip_miles.mean(),
     cost_total=_.total_amount.sum(),
     cost_avg=_.total_amount.mean()
 )

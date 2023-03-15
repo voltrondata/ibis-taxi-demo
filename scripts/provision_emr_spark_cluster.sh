@@ -2,7 +2,15 @@
 
 set -e
 
-AVAILABILITY_ZONE="us-east-1a"
+# Process args
+INSTANCE_TYPE=${1:-"m5.xlarge"}
+INSTANCE_COUNT=${2:-3}
+
+echo "Using instance type: ${INSTANCE_TYPE}"
+echo "Using instance count: ${INSTANCE_COUNT}"
+
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
+AVAILABILITY_ZONE="${AWS_DEFAULT_REGION}a"
 
 SCRIPT_DIR=$(dirname ${0})
 KEY_DIR="${SCRIPT_DIR}/.ssh"
@@ -27,9 +35,11 @@ CLUSTER_ID=$(aws emr create-cluster \
               --release-label emr-6.10.0 \
               --applications Name=Spark \
               --ec2-attributes KeyName=sparkKey,SubnetId="${SUBNET_ID}" \
-              --instance-type m5.xlarge \
-              --instance-count 2 \
+              --instance-type ${INSTANCE_TYPE} \
+              --instance-count ${INSTANCE_COUNT} \
               --use-default-roles \
+              --log-uri s3://emr-log-bucket-${AWS_ACCOUNT_ID}/logs/ \
+              --bootstrap-actions Path=s3://emr-bootstrap-bucket-${AWS_ACCOUNT_ID}/emr_bootstrap.sh \
               --no-auto-terminate \
               --auto-termination-policy IdleTimeout=3600 |  jq -r '.ClusterId'
             )
@@ -52,5 +62,22 @@ EMR_SECURITY_GROUP=$(aws emr describe-cluster --cluster-id ${CLUSTER_ID} | jq -r
 aws ec2 authorize-security-group-ingress \
 --group-id ${EMR_SECURITY_GROUP} \
 --ip-permissions '[{"IpProtocol": "tcp", "FromPort": 22, "ToPort": 22, "IpRanges": [{"CidrIp": "0.0.0.0/0"}]}]' || echo "ingress already setup"
+
+# Loop until the cluster is ready and completed all bootstrap actions
+while true; do
+    # Get the status of the cluster
+    status=$(aws emr describe-cluster --cluster-id ${CLUSTER_ID} --query Cluster.Status.State --output text)
+    echo "Cluster status: $status"
+
+    # If the cluster and bootstrap actions are both done, break out of the loop
+    if [ "$status" == "WAITING" ]; then
+        break
+    fi
+
+    # Wait 30 seconds before checking again
+    sleep 30
+done
+
+echo "Cluster is ready!"
 
 echo -e "Use this SSH command to connect to the EMR cluster: \nssh -i ${SSH_KEY} hadoop@${MASTER_DNS}"
