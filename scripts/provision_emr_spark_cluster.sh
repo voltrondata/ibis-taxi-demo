@@ -41,7 +41,7 @@ CLUSTER_ID=$(aws emr create-cluster \
               --log-uri s3://emr-log-bucket-${AWS_ACCOUNT_ID}/logs/ \
               --bootstrap-actions Path=s3://emr-bootstrap-bucket-${AWS_ACCOUNT_ID}/emr_ibis_bootstrap.sh \
               --no-auto-terminate \
-              --auto-termination-policy IdleTimeout=3600 |  jq -r '.ClusterId'
+              --auto-termination-policy IdleTimeout=3600 | jq -r '.ClusterId'
             )
 
 echo "The EMR Cluster ID is: ${CLUSTER_ID}"
