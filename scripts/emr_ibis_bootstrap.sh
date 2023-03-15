@@ -1,13 +1,15 @@
 #!/bin/bash
 
 ################################################################################
-# Script Name: emr_bootstrap.sh
-# Description: This script installs Python 3.10 from source with OpenSSL.
+# Script Name: emr_ibis_bootstrap.sh
+# Description: This script installs the necessary components to run the
+#              ibis-framework on an AWS EMR (Spark) cluster.
+#              It installs Python 3.10 from source with OpenSSL.
 #              This is because the latest EMR version (as of March 15, 2023) -
 #              6.10.0 comes with Python 3.7 and doesn't work with the latest
 #              ibis-framework version (which requires Python 3.8 or above).
 #
-# Usage:       ./emr_bootstrap.sh
+# Usage:       ./emr_ibis_bootstrap.sh
 #
 # Author:      Voltron Data
 # Date:        March 15, 2023
@@ -58,6 +60,10 @@ sudo make install
 
 popd
 popd
+
+# Install ibis PySpark requirements
+pip install --upgrade pip setuptools
+pip install ibis-framework[pyspark] sqlalchemy==1.4.46
 
 echo "All steps completed successfully."
 

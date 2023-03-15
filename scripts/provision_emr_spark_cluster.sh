@@ -39,7 +39,7 @@ CLUSTER_ID=$(aws emr create-cluster \
               --instance-count ${INSTANCE_COUNT} \
               --use-default-roles \
               --log-uri s3://emr-log-bucket-${AWS_ACCOUNT_ID}/logs/ \
-              --bootstrap-actions Path=s3://emr-bootstrap-bucket-${AWS_ACCOUNT_ID}/emr_bootstrap.sh \
+              --bootstrap-actions Path=s3://emr-bootstrap-bucket-${AWS_ACCOUNT_ID}/emr_ibis_bootstrap.sh \
               --no-auto-terminate \
               --auto-termination-policy IdleTimeout=3600 |  jq -r '.ClusterId'
             )
