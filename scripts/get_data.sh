@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 SCRIPT_DIR=$(dirname ${0})
 DATA_DIR="${SCRIPT_DIR}/../data"
 

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Get the AWS Account ID
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
 
