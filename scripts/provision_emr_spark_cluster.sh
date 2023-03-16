@@ -4,7 +4,7 @@ set -e
 
 # Process args
 INSTANCE_TYPE=${1:-"m5.xlarge"}
-INSTANCE_COUNT=${2:-3}
+INSTANCE_COUNT=${2:-5}
 
 echo "Using instance type: ${INSTANCE_TYPE}"
 echo "Using instance count: ${INSTANCE_COUNT}"
@@ -13,6 +13,9 @@ AWS_ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
 AVAILABILITY_ZONE="${AWS_DEFAULT_REGION}a"
 
 SCRIPT_DIR=$(dirname ${0})
+# Source the .env file for the AWS env vars
+source ${SCRIPT_DIR}/.env
+
 KEY_DIR="${SCRIPT_DIR}/.ssh"
 
 SSH_KEY="${KEY_DIR}/keypair.pem"
@@ -74,6 +77,13 @@ while true; do
         break
     fi
 
+    # If the cluster has terminated with errors, exit with failure
+    if [ "$status" == "TERMINATED_WITH_ERRORS" ]; then
+        error_message=$(aws emr describe-cluster --cluster-id ${CLUSTER_ID} --query Cluster.Status.StateChangeReason.Message --output text)
+        echo "The Cluster has terminated with error: '${error_message}' - exiting script..."
+        exit 1
+    fi
+
     # Wait 30 seconds before checking again
     sleep 30
 done
@@ -81,3 +91,5 @@ done
 echo "Cluster is ready!"
 
 echo -e "Use this SSH command to connect to the EMR cluster: \nssh -i ${SSH_KEY} hadoop@${MASTER_DNS}"
+
+exit 0
