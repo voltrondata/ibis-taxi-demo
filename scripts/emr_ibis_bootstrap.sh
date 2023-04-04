@@ -63,7 +63,7 @@ popd
 
 # Install ibis PySpark requirements
 pip3 install --upgrade pip setuptools
-pip3 install ibis-framework[pyspark] sqlalchemy==1.4.46
+pip3 install ibis-framework[pyspark] sqlalchemy==1.4.*
 
 echo "All steps completed successfully."
 
