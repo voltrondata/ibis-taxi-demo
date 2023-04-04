@@ -1,6 +1,32 @@
 #!/bin/bash
 
+################################################################################
+# Script Name: provision_emr_spark_cluster.sh
+# Description: This script uses the AWS Client to provision a Spark EMR cluster
+#              in Amazon Web Services (AWS).  This script requires that you have
+#              the AWS cli installed, and are authenticated with an AWS account
+#              that has provisioning privileges.
+#
+#              You must have a .env file in the same directory as this script
+#              which has these variables set (with "export " in front) to valid values:
+#              AWS_ACCESS_KEY_ID
+#              AWS_SECRET_ACCESS_KEY
+#              AWS_SESSION_TOKEN
+#              AWS_DEFAULT_REGION
+#
+# Usage:       ./provision_emr_spark_cluster.sh
+#
+# Author:      Voltron Data
+# Date:        March 15, 2023
+#
+# Version:     1.0
+################################################################################
+
 set -e
+
+SCRIPT_DIR=$(dirname ${0})
+# Source the .env file for the AWS env vars needed for authentication
+source ${SCRIPT_DIR}/.env
 
 # Process args
 INSTANCE_TYPE=${1:-"m5.xlarge"}
@@ -9,12 +35,11 @@ INSTANCE_COUNT=${2:-5}
 echo "Using instance type: ${INSTANCE_TYPE}"
 echo "Using instance count: ${INSTANCE_COUNT}"
 
-AWS_ACCOUNT_ID=$(aws sts get-caller-identity | jq -r '.Account')
-AVAILABILITY_ZONE="${AWS_DEFAULT_REGION}a"
+AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+echo "Using AWS Account ID: ${AWS_ACCOUNT_ID}"
 
-SCRIPT_DIR=$(dirname ${0})
-# Source the .env file for the AWS env vars
-source ${SCRIPT_DIR}/.env
+AVAILABILITY_ZONE="${AWS_DEFAULT_REGION}a"
+echo "Using Availability Zone: ${AVAILABILITY_ZONE}"
 
 KEY_DIR="${SCRIPT_DIR}/.ssh"
 
@@ -23,7 +48,7 @@ SSH_KEY="${KEY_DIR}/keypair.pem"
 # Create an ssh keypair
 rm -f ${SSH_KEY}
 aws ec2 delete-key-pair --key-name sparkKey || echo "n/a"
-aws ec2 create-key-pair --key-name sparkKey | jq --raw-output .KeyMaterial > ${SSH_KEY}
+aws ec2 create-key-pair --key-name sparkKey --query KeyMaterial --output text > ${SSH_KEY}
 chmod u=r,g=,o= ${SSH_KEY}
 
 # Create default roles if needed
@@ -31,6 +56,12 @@ aws emr create-default-roles
 
 # Get the default subnet for the availability zone
 SUBNET_ID=$(aws ec2 describe-subnets | jq -r --arg az "$AVAILABILITY_ZONE" '.Subnets[] | select(.AvailabilityZone==$az and .DefaultForAz==true) | .SubnetId')
+
+BOOTSTRAP_BUCKET_NAME="emr-bootstrap-bucket-${AWS_ACCOUNT_ID}"
+echo "Using EMR Bootstrap bucket with name: ${BOOTSTRAP_BUCKET_NAME}"
+
+LOG_BUCKET_NAME="emr-log-bucket-${AWS_ACCOUNT_ID}"
+echo "Using EMR Log bucket with name: ${LOG_BUCKET_NAME}"
 
 # Create the cluster
 CLUSTER_ID=$(aws emr create-cluster \
@@ -41,30 +72,31 @@ CLUSTER_ID=$(aws emr create-cluster \
               --instance-type ${INSTANCE_TYPE} \
               --instance-count ${INSTANCE_COUNT} \
               --use-default-roles \
-              --log-uri s3://emr-log-bucket-${AWS_ACCOUNT_ID}/logs/ \
-              --bootstrap-actions Path=s3://emr-bootstrap-bucket-${AWS_ACCOUNT_ID}/emr_ibis_bootstrap.sh \
+              --log-uri s3://${LOG_BUCKET_NAME}/logs/ \
+              --bootstrap-actions Path=s3://${BOOTSTRAP_BUCKET_NAME}/emr_ibis_bootstrap.sh \
               --no-auto-terminate \
-              --auto-termination-policy IdleTimeout=3600 | jq -r '.ClusterId'
+              --auto-termination-policy IdleTimeout=3600 --query ClusterId --output text
             )
 
 echo "The EMR Cluster ID is: ${CLUSTER_ID}"
 
 # Loop until the command returns a non-null value
-while [[ $(aws emr describe-cluster --cluster-id ${CLUSTER_ID} | jq -r '.Cluster.MasterPublicDnsName') == "null" ]]; do
+while [[ $(aws emr describe-cluster --cluster-id ${CLUSTER_ID} --query Cluster.MasterPublicDnsName --output text) == "None" ]]; do
   echo "Waiting for EMR cluster to start..."
   sleep 10
 done
 
 # Set the environment variable to the returned value
-export MASTER_DNS=$(aws emr describe-cluster --cluster-id ${CLUSTER_ID} | jq -r '.Cluster.MasterPublicDnsName')
+export MASTER_DNS=$(aws emr describe-cluster --cluster-id ${CLUSTER_ID} --query Cluster.MasterPublicDnsName --output text)
 echo "The EMR Cluster Public DNS Name is: ${MASTER_DNS}"
 
-EMR_SECURITY_GROUP=$(aws emr describe-cluster --cluster-id ${CLUSTER_ID} | jq -r '.Cluster.Ec2InstanceAttributes.EmrManagedMasterSecurityGroup')
+EMR_SECURITY_GROUP=$(aws emr describe-cluster --cluster-id ${CLUSTER_ID} --query Cluster.Ec2InstanceAttributes.EmrManagedMasterSecurityGroup --output text)
+echo "The EMR Security Group is: ${EMR_SECURITY_GROUP}"
 
 # Allow ssh traffic to the EMR cluster
 aws ec2 authorize-security-group-ingress \
 --group-id ${EMR_SECURITY_GROUP} \
---ip-permissions '[{"IpProtocol": "tcp", "FromPort": 22, "ToPort": 22, "IpRanges": [{"CidrIp": "0.0.0.0/0"}]}]' || echo "ingress already setup"
+--ip-permissions '[{"IpProtocol": "tcp", "FromPort": 22, "ToPort": 22, "IpRanges": [{"CidrIp": "0.0.0.0/0"}]}]' || echo "Ingress already setup"
 
 # Loop until the cluster is ready and completed all bootstrap actions
 while true; do
