@@ -1,6 +1,8 @@
 # Ibis Taxi Demo
 
-This repo demonstrates how to run Ibis with a DuckDB back-end for local development and a PySpark backend for distributed compute when processing larger data sets. 
+This repo demonstrates how to run [Ibis](https://ibis-project.org) with a [DuckDB](https://duckdb.org) backend for local development and a PySpark backend for distributed compute when processing larger data sets. 
+
+**Prerequisites**: To run the EMR Spark examples - you must have an AWS Account and have access to a role which can provision S3 buckets and [EMR](https://aws.amazon.com/emr/) Clusters.
 
 ## Setup
 
@@ -23,7 +25,7 @@ python3 -m venv ./venv
 # Upgrade pip
 pip install --upgrade pip
 
-# Install requirements
+# Install requirements (ibis-framework, etc.)
 pip install --requirement requirements.txt
 ```
 
@@ -45,16 +47,16 @@ export AWS_DEFAULT_REGION="us-east-1"
 
 Note: You'll have to update this file when your token expires...
 
-## Local Development - Ibis DuckDB back-end demo
+## Local Development - Ibis DuckDB backend demo
 
-### 1. Assuming you've run the setup steps above - run this command to download parquet data locally to the ./data folder:
+### 1. Assuming you've run the setup steps above - run this command to download [Public Taxi S3 parquet data](https://aws.amazon.com/marketplace/pp/prodview-okyonroqg5b2u#resources) locally to the ./data folder (it is about a 443MB download):
 ```shell
 pushd scripts
 ./get_data.sh
 popd
 ```
 
-### 2. Now run the Python Ibis code to process the local parquet data using DuckDB:
+### 2. Now run the Python Ibis code to process the local parquet data using Ibis and the DuckDB backend:
 ```shell
 python ibis_demo_duckdb.py
 ```
@@ -66,7 +68,7 @@ You should see output similar to the following:
 1            HV0005     5117891     25,352,368.39            4.95 137,708,332.74     26.91
 ```
 
-## Distributed Compute - Ibis PySpark back-end demo using Amazon EMR Spark
+## Distributed Compute - Ibis PySpark backend demo using Amazon EMR Spark
 For larger datasets, you'll likely need a distributed compute engine such as Spark.
 
 **Important**: You'll need to have an AWS account which has privileges to create S3 buckets and provision EMR clusters in your AWS Account.
