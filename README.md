@@ -13,12 +13,16 @@ git clone https://github.com/voltrondata/ibis-taxi-demo
 Create a new Python 3.8+ virtual environment and install requirements with:
 ```shell
 cd ibis-taxi-demo
+
 # Create the virtual environment
 python3 -m venv ./venv
+
 # Activate the virtual environment
 . ./venv/bin/activate
+
 # Upgrade pip
 pip install --upgrade pip
+
 # Install requirements
 pip install --requirement requirements.txt
 ```
@@ -65,7 +69,7 @@ You should see output similar to the following:
 ## Distributed Compute - Ibis PySpark back-end demo using Amazon EMR Spark
 For larger datasets, you'll likely need a distributed compute engine such as Spark.
 
-**Note**: You'll need to have an AWS account which has privileges to create S3 buckets and provision EMR clusters.
+**Important**: You'll need to have an AWS account which has privileges to create S3 buckets and provision EMR clusters in your AWS Account.
 
 These steps show how to provision an interactive AWS EMR Spark cluster which will run a special bootstrap script to upgrade the default Python version from 3.7 to 3.10 so that you can use the latest Ibis version features with the Ibis PySpark backend.
 
@@ -88,25 +92,27 @@ Assuming you've run the setup step #1 above and that you have an AWS account aut
 ./provision_emr_spark_cluster.sh
 ```
 
-The script should eventually have output like this example:
+**Note**: the provisioning script will create a SSH key and place it into the [scripts/.ssh](scripts/.ssh) directory.  The file will be git ignored for security reasons.
+
+The script will run for several minutes and eventually have output like this example:
 ```
 Cluster status: BOOTSTRAPPING
 Cluster status: WAITING
 Cluster is ready!
 Use this SSH command to connect to the EMR cluster: 
-ssh -i ./.ssh/keypair.pem hadoop@ec2-54-226-25-229.compute-1.amazonaws.com
+ssh -i ./.ssh/keypair.pem hadoop@ec2-xx-xxx-xx-xxx.compute-1.amazonaws.com
 ```
 
 Go ahead and connect using the ssh command output by the script (not the example above).
 
-When you connect the first time, ssh will ask: "Are you sure you want to continue connecting (yes/no/[fingerprint])?"
+When you connect the first time, ssh will ask: ``Are you sure you want to continue connecting (yes/no/[fingerprint])?"``
 
 Type: ``yes``   
 then hit Enter.
 
 Once connected, type ``pyspark`` and then hit enter to start the interactive PySpark shell.
 
-Copy and paste the contents of file: [ibis_demo_pyspark.py](ibis_demo_pyspark.py) into the shell to run the Ibis code against a much larger dataset and the local DuckDB example.  This code will use distributed compute to divide and conquer the workload using Spark.
+Copy and paste the contents of file: [ibis_demo_pyspark.py](ibis_demo_pyspark.py) into the shell to run the Ibis code against a much larger dataset and the local DuckDB example.  This code will use Spark's distributed compute capabilities to divide and conquer the larger data workload.
 
 You should see output similar to the following:
 ```text
