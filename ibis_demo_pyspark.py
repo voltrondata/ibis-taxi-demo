@@ -15,7 +15,7 @@ spark = SparkSession \
     .appName(name="Ibis-Rocks!") \
     .getOrCreate()
 
-# Get our PySpark connection
+# Connect the Ibis PySpark back-end to the Spark Session
 con = ibis.pyspark.connect(spark)
 
 # Read parquet into our Spark dataframe
