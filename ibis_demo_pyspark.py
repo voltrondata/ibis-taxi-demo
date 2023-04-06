@@ -1,7 +1,7 @@
 import ibis
 from ibis import _
 import pandas as pd
-
+from pyspark.sql import SparkSession
 
 # Setup pandas
 pd.set_option("display.width", 0)
@@ -9,7 +9,13 @@ pd.set_option("display.max_columns", 99)
 pd.set_option("display.max_colwidth", None)
 pd.set_option("display.float_format", '{:,.2f}'.format)
 
-# Get our PySpark connection
+# Get a Spark Session
+spark = SparkSession \
+    .builder \
+    .appName(name="Ibis-Rocks!") \
+    .getOrCreate()
+
+# Connect the Ibis PySpark back-end to the Spark Session
 con = ibis.pyspark.connect(spark)
 
 # Read parquet into our Spark dataframe
