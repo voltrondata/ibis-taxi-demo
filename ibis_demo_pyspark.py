@@ -18,14 +18,8 @@ spark = SparkSession \
 # Connect the Ibis PySpark back-end to the Spark Session
 con = ibis.pyspark.connect(spark)
 
-# Read parquet into our Spark dataframe
-spark_df = spark.read.parquet("s3://nyc-tlc/trip data/fhvhv_tripdata_*.parquet")
-
-# Create a temporary Spark view
-spark_df.createOrReplaceTempView("trip_data")
-
-# Assign the Spark view to our ibis table
-trip_data = con.table("trip_data")
+# Read the parquet data into an ibis table
+trip_data = con.read_parquet("s3://nyc-tlc/trip data/fhvhv_tripdata_*.parquet")
 
 trip_data = trip_data.mutate(total_amount=_.base_passenger_fare + _.tolls + _.sales_tax + _.congestion_surcharge + _.tips)
 
