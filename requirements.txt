@@ -9,7 +9,7 @@ numpy==1.24.2
 pandas==1.5.3
 parsy==2.1
 py4j==0.10.9.7
-pyarrow==11.0.0
+pyarrow==14.0.1
 Pygments==2.15.0
 pyspark==3.3.2
 python-dateutil==2.8.2
