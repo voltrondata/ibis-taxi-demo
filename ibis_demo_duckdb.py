@@ -31,6 +31,6 @@ trip_summary = (trip_data.group_by([_.hvfhs_license_num])
 )
 )
 
-ibis.show_sql(trip_summary)
+print(ibis.to_sql(trip_summary))
 
 print(trip_summary.execute())

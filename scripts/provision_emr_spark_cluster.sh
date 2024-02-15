@@ -29,11 +29,15 @@ SCRIPT_DIR=$(dirname ${0})
 source ${SCRIPT_DIR}/.env
 
 # Process args
-INSTANCE_TYPE=${1:-"m5.xlarge"}
-INSTANCE_COUNT=${2:-5}
+INSTANCE_TYPE=${1:-"r5.8xlarge"}
+INSTANCE_COUNT=${2:-4}
+EMR_VERSION=${3:-"emr-7.0.0"}
+TAGS=${4:-'"creation_method=script_philip_voltrondata_com" "environment=development" "team=field-eng" "owner=philip_voltrondata_com" "service=emr-benchmarking" "no_delete=true"'}
+RUN_BOOTSTRAP_ACTIONS=${5:-"FALSE"}
 
 echo "Using instance type: ${INSTANCE_TYPE}"
 echo "Using instance count: ${INSTANCE_COUNT}"
+echo "Using EMR Version: ${EMR_VERSION}"
 
 AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
 echo "Using AWS Account ID: ${AWS_ACCOUNT_ID}"
@@ -63,19 +67,25 @@ echo "Using EMR Bootstrap bucket with name: ${BOOTSTRAP_BUCKET_NAME}"
 LOG_BUCKET_NAME="emr-log-bucket-${AWS_ACCOUNT_ID}"
 echo "Using EMR Log bucket with name: ${LOG_BUCKET_NAME}"
 
+# Add a bootstrap script if desired
+if [ "${RUN_BOOTSTRAP_ACTIONS}" != "FALSE" ]; then
+  BOOTSTRAP_ARG="--bootstrap-actions Path=s3://${BOOTSTRAP_BUCKET_NAME}/emr_ibis_bootstrap.sh"
+fi
+
 # Create the cluster
 CLUSTER_ID=$(aws emr create-cluster \
               --name "Sparky1" \
-              --release-label emr-6.10.0 \
+              --release-label ${EMR_VERSION} \
               --applications Name=Spark \
               --ec2-attributes KeyName=sparkKey,SubnetId="${SUBNET_ID}" \
               --instance-type ${INSTANCE_TYPE} \
               --instance-count ${INSTANCE_COUNT} \
               --use-default-roles \
               --log-uri s3://${LOG_BUCKET_NAME}/logs/ \
-              --bootstrap-actions Path=s3://${BOOTSTRAP_BUCKET_NAME}/emr_ibis_bootstrap.sh \
               --no-auto-terminate \
-              --auto-termination-policy IdleTimeout=3600 --query ClusterId --output text
+              --auto-termination-policy IdleTimeout=3600 --query ClusterId --output text \
+              --tags ${TAGS} \
+              ${BOOTSTRAP_ARG}
             )
 
 echo "The EMR Cluster ID is: ${CLUSTER_ID}"

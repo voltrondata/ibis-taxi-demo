@@ -98,7 +98,6 @@ Assuming you've run the setup step #1 above and that you have an AWS account aut
 
 The script will run for several minutes and eventually have output like this example:
 ```
-Cluster status: BOOTSTRAPPING
 Cluster status: WAITING
 Cluster is ready!
 Use this SSH command to connect to the EMR cluster: 
